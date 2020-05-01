@@ -10,7 +10,40 @@ pub enum OpCodes {
     SetMotorDirection(Motor, Direction),
     SetMotorOnOff(Motor, State),
     SetMotorPower(Motor, Power),
-    SensorValue,
+}
+
+impl OpCodes {
+    /// Check if the OpCode can be uses as a command to the programmable brick
+    pub fn is_request(&self) -> bool {
+        use OpCodes::*;
+        match self {
+            Alive => true,
+            PlaySound(_) => true,
+            UnlockFirmware => true,
+            GetBatteryPower => true,
+            GetMemoryMap => true,
+            PowerOff => true,
+            SetMotorDirection(_, _) => true,
+            SetMotorOnOff(_, _) => true,
+            SetMotorPower(_, _) => true,
+        }
+    }
+
+    /// Check if the OpCode can be uses as a bytecode in a programm for the programmable brick
+    pub fn is_bytecode(&self) -> bool {
+        use OpCodes::*;
+        match self {
+            Alive => false,
+            PlaySound(_) => true,
+            UnlockFirmware => false,
+            GetBatteryPower => false,
+            GetMemoryMap => false,
+            PowerOff => true,
+            SetMotorDirection(_, _) => true,
+            SetMotorOnOff(_, _) => true,
+            SetMotorPower(_, _) => true,
+        }
+    }
 }
 
 impl From<OpCodes> for Vec<u8> {
@@ -32,7 +65,6 @@ impl From<OpCodes> for Vec<u8> {
             OpCodes::SetMotorPower(motor, power) => {
                 vec![0x13, motor.into(), Source::Immediate.into(), power.into()]
             }
-            _ => unimplemented!(),
         }
     }
 }

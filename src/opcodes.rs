@@ -10,6 +10,8 @@ pub enum OpCodes {
     SetMotorDirection(Motor, Direction),
     SetMotorOnOff(Motor, State),
     SetMotorPower(Motor, Power),
+    /// Wait for some time. Argument specifies the delay time in 1/100 of a second.
+    Wait(u8),
 }
 
 impl OpCodes {
@@ -26,6 +28,7 @@ impl OpCodes {
             SetMotorDirection(_, _) => true,
             SetMotorOnOff(_, _) => true,
             SetMotorPower(_, _) => true,
+            Wait(_) => false,
         }
     }
 
@@ -42,29 +45,32 @@ impl OpCodes {
             SetMotorDirection(_, _) => true,
             SetMotorOnOff(_, _) => true,
             SetMotorPower(_, _) => true,
+            Wait(_) => true,
         }
     }
 }
 
 impl From<OpCodes> for Vec<u8> {
     fn from(op_codes: OpCodes) -> Vec<u8> {
+        use OpCodes::*;
         match op_codes {
-            OpCodes::Alive => vec![0x10],
-            OpCodes::PlaySound(sound) => vec![0x51, sound.into()],
-            OpCodes::UnlockFirmware => vec![
+            Alive => vec![0x10],
+            PlaySound(sound) => vec![0x51, sound.into()],
+            UnlockFirmware => vec![
                 0xa5, 0x44, 0x6f, 0x20, 0x79, 0x6f, 0x75, 0x20, 0x62, 0x79, 0x74, 0x65, 0x2c, 0x20,
                 0x77, 0x68, 0x65, 0x6e, 0x20, 0x49, 0x20, 0x6b, 0x6e, 0x6f, 0x63, 0x6b, 0x3f,
             ],
-            OpCodes::GetBatteryPower => vec![0x30],
-            OpCodes::GetMemoryMap => vec![0x20],
-            OpCodes::PowerOff => vec![0x60],
-            OpCodes::SetMotorDirection(motor, direction) => {
+            GetBatteryPower => vec![0x30],
+            GetMemoryMap => vec![0x20],
+            PowerOff => vec![0x60],
+            SetMotorDirection(motor, direction) => {
                 vec![0xe1, u8::from(motor) | u8::from(direction)]
             }
-            OpCodes::SetMotorOnOff(motor, state) => vec![0x21, u8::from(motor) | u8::from(state)],
-            OpCodes::SetMotorPower(motor, power) => {
+            SetMotorOnOff(motor, state) => vec![0x21, u8::from(motor) | u8::from(state)],
+            SetMotorPower(motor, power) => {
                 vec![0x13, motor.into(), Source::Immediate.into(), power.into()]
             }
+            Wait(delay) => vec![0x43, Source::Immediate.into(), delay],
         }
     }
 }
@@ -146,9 +152,9 @@ pub enum State {
 impl From<State> for u8 {
     fn from(state: State) -> u8 {
         match state {
-            State::On => 0x08,
-            State::Off => 0x04,
-            State::Float => 0x08 | 0x04,
+            State::On => 0x80,
+            State::Off => 0x40,
+            State::Float => 0x00,
         }
     }
 }
@@ -183,6 +189,7 @@ impl From<Power> for u8 {
 
 /// Internal Enum to encodes sources for commands
 #[derive(Debug)]
+#[allow(dead_code)]
 enum Source {
     Variable,
     Timer,
